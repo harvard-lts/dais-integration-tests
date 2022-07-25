@@ -13,6 +13,15 @@ def define_resources(app):
               description='This project contains the integration tests for the HDC project')
     dashboard = api.namespace('/', description="This project contains the integration tests for the HDC project")
 
+    # Env vars
+    dataverse_endpoint = os.environ.get('DATAVERSE_ENDPOINT')
+    admin_user_token = os.environ.get('ADMIN_USER_API_TOKEN')
+    dataverse_s3_access_id = os.environ.get('AWS_ACCESS_KEY_ID')
+    dataverse_s3_secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
+    s3_bucket_name = os.environ.get('S3_BUCKET_NAME')
+    dropbox_destination = os.environ.get('DROPBOX_DESTINATION')
+
+
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
     class Version(Resource):
@@ -48,17 +57,19 @@ def define_resources(app):
 
         return json.dumps(result)
 
-    @app.route('/DIMS/DVIngest')
-    def dims_ingest_dv():
+    @app.route('/ingest/happypath')
+    def ingest_happypath():
+        # 1) Call curator app for ingest
+        # 3) Wait
+        # 2) DIMS calls integration tests for status - check status
+        pass
+
+
+    @app.route('/DVIngest/createDataset')
+    def dv_ingest_create_dataset():
         num_failed_tests = 0
         tests_failed = []
         result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
-        dataverse_endpoint = os.environ.get('DATAVERSE_ENDPOINT')
-        admin_user_token = os.environ.get('ADMIN_USER_API_TOKEN')
-        dataverse_s3_access_id = os.environ.get('AWS_ACCESS_KEY_ID')
-        dataverse_s3_secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-        s3_bucket_name = os.environ.get('S3_BUCKET_NAME')
-        dropbox_destination = os.environ.get('DROPBOX_DESTINATION')
 
         app.logger.debug("Loading dataset dictionary")
         with open('/home/appuser/test_data/dataset-finch1.json') as dataset:
@@ -88,6 +99,24 @@ def define_resources(app):
         result["info"]["persistentId"] = persistent_id
         result["info"]["datasetId"] = dataset_id
         result["info"]["Create Dataset"] = {"status_code": create_dataset.status_code}
+
+        return json.dumps(result)
+
+
+    @app.route('/DVIngest/publishDataset/<dataset_id>/<persistent_id>')
+    def dv_ingest_publish_dataset(dataset_id=None, persistent_id=None):
+        num_failed_tests = 0
+        tests_failed = []
+        result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
+
+        headers = {"X-Dataverse-key": admin_user_token}
+
+        if dataset_id == None or persistent_id == None:
+            result["num_failed"] += 1
+            result["tests_failed"].append("Publish Dataset")
+            result["Failed Publish Dataset"] = {"invalid parameters": "dataset_id, persistent_id",
+                                               "text": "Both parameters must be provided"}
+            return json.dumps(result)
 
         app.logger.debug("Publishing dataset")
         # Publish Dataset
@@ -121,84 +150,46 @@ def define_resources(app):
             result["Failed Publish Dataset"] = {"status_code": publish_dataset.status_code,
                                                 "text": json_publish_dataset["message"]}
             return json.dumps(result)
+
         result["info"]["Publish Dataset"] = {"status_code": publish_dataset.status_code}
+        return json.dumps(result)
 
-        # Another wait for safe measure
-        time.sleep(3.0)
 
-        app.logger.debug("Check S3 for exported dataset")
-        # Check S3 Bucket for dataset export - remove this because trasfer service will delete it
-        session = boto3.Session(
-            aws_access_key_id=dataverse_s3_access_id,
-            aws_secret_access_key=dataverse_s3_secret_key)
+    @app.route('/ingest/checkDropbox/<batchName>')
+    def ingest_check_dropbox(batchName):
+        num_failed_tests = 0
+        tests_failed = []
+        result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
 
-        # Then use the session to get the resource
-        s3 = session.resource('s3')
-
-        my_bucket = s3.Bucket(s3_bucket_name)
-
-        # Reformat persistent_id
-        reformatted_id = str(persistent_id).lower()
-        reformatted_id = reformatted_id.replace(":", "-")
-        reformatted_id = reformatted_id.replace(".", "-")
-        reformatted_id = reformatted_id.replace("/", "-")
-        reformatted_id = reformatted_id + "/"
-
-        export_successful = False
-        for my_bucket_object in my_bucket.objects.all():
-            if re.match(reformatted_id, my_bucket_object.key):
-                export_successful = True
-                result["info"]["Check S3"] = {"Export Status": "Found export id " + reformatted_id}
-
-        if not export_successful:
-            result["num_failed"] += 1
-            result["tests_failed"].append("Check S3")
-            result["Failed Check S3"] = {"Export Status": "Could not find export id " + reformatted_id}
-            return json.dumps(result)
-
-        time.sleep(5.0)
-
-        reformatted_id_stripped = reformatted_id.strip('/')
-        doi_dir_match = re.compile(reformatted_id_stripped)
-        app.logger.debug("Check dropbox for exported dataset")
-        # Check dropbox for export
         dataset_transferred = False
-        app.logger.debug("checking dir: " + dropbox_destination + "/" + reformatted_id_stripped)
-        if os.path.exists(os.path.join(dropbox_destination, reformatted_id_stripped)):
+        app.logger.debug("checking dir: " + dropbox_destination + "/" + batchName)
+        if os.path.exists(os.path.join(dropbox_destination, batchName)):
             dataset_transferred = True
-            result["info"]["Dropbox Transfer Status"] = {"Found Dataset at Path": str(os.path.join(dropbox_destination, reformatted_id_stripped))}
+            result["info"]["Dropbox Transfer Status"] = {
+                "Found Dataset at Path": str(os.path.join(dropbox_destination, batchName))}
 
         if not dataset_transferred:
             result["num_failed"] += 1
             result["tests_failed"].append("Check Dropbox Transfer")
-            result["Failed Dropbox Transfer"] = {"Dropbox Transfer Status": "Could not find " + reformatted_id_stripped + " in dropbox " + dropbox_destination}
-            return json.dumps(result)
-        #
-        # # Delete dataset from dropbox if in dropbox
-        # if dataset_transferred:
-        #     app.logger.debug("Delete test dataset from dropbox")
-        #     if shutil.rmtree(os.path.join(dropbox_destination, reformatted_id)):
-        #         result["info"]["Delete Dataset From Dropbox"] = {"Deleted Dataset at Path": str(os.path.join(dropbox_destination, reformatted_id))}
-        #     else:
-        #         result["num_failed"] += 1
-        #         result["tests_failed"].append("Delete Dataset From Dropbox")
-        #         result["Failed Delete From Dropbox"] = {"Delete From Dropbox": "Could not delete " +
-        #                                                 reformatted_id_stripped + "in dropbox " + dropbox_destination}
+            result["Failed Dropbox Transfer"] = {
+                "Dropbox Transfer Status": "Could not find " + batchName + " in dropbox " + dropbox_destination}
 
-        # Delete dataset from S3
+        return json.dumps(result)
 
-        # app.logger.debug("Delete dataset")
-        # # Delete Published Dataset
-        # delete_published_ds = requests.delete(
-        #     dataverse_endpoint + '/api/datasets/' + str(dataset_id) + '/destroy',
-        #     headers=headers,
-        #     verify=False)
-        # json_delete_published_ds = delete_published_ds.json()
-        # if json_delete_published_ds["status"] != "OK":
-        #     result["num_failed"] += 1
-        #     result["tests_failed"].append("Delete Published Dataset")
-        #     result["Failed Delete Published Dataset"] = {"status_code": delete_published_ds.status_code,
-        #                                                  "text": json_delete_published_ds["message"]}
-        # result["info"]["Delete Published Dataset"] = {"status_code": delete_published_ds.status_code}
 
+    @app.route('/ingest/deleteFromDropbox/<batchName>')
+    def ingest_delete_from_dropbox(batchName):
+        num_failed_tests = 0
+        tests_failed = []
+        result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
+
+        app.logger.debug("Delete test dataset from dropbox")
+        if shutil.rmtree(os.path.join(dropbox_destination, batchName)):
+            result["info"]["Delete Dataset From Dropbox"] = {
+                "Deleted Dataset at Path": str(os.path.join(dropbox_destination, batchName))}
+        else:
+            result["num_failed"] += 1
+            result["tests_failed"].append("Delete Dataset From Dropbox")
+            result["Failed Delete From Dropbox"] = {"Delete From Dropbox": "Could not delete " +
+                                                                           batchName + "in dropbox " + dropbox_destination}
         return json.dumps(result)
