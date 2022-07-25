@@ -54,12 +54,12 @@ This step is only required if additional python packages must be installed durin
 ##### Run docker exec to execute a shell in the container by name
 
 ```
-docker exec -it hdc-integration-tests bash
+docker exec -it dais-integration-tests bash
 ```
 
 ##### Install a new pip package
 
-Once inside the hdc-integration-tests container, run the pip install command to install a new package and update the requirements text file.
+Once inside the dais-integration-tests container, run the pip install command to install a new package and update the requirements text file.
 
 ```
 pip install packagename && pip freeze > requirements.txt
