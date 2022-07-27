@@ -8,7 +8,7 @@ version: '3.8'
 services:
 
   dais-integration-tests:
-    image: registry.lts.harvard.edu/lts/dais-integration-tests:0.0.1
+    image: registry.lts.harvard.edu/lts/int-tests:0.0.1
     build:
       context: .
       dockerfile: Dockerfile
