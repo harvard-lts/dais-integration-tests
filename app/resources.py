@@ -60,8 +60,9 @@ def define_resources(app):
     @app.route('/ingest/happypath')
     def ingest_happypath():
         # 1) Call curator app for ingest
-        # 3) Wait
-        # 2) DIMS calls integration tests for status - check status
+        # 2) Wait
+        # 3) Check for loadreport file
+        # 4) DIMS calls integration tests for status - check status
         pass
 
 
