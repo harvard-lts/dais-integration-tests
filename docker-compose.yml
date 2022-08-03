@@ -7,8 +7,8 @@ version: '3.8'
 
 services:
 
-  hdc-integration-tests:
-    image: registry.lts.harvard.edu/lts/hdc-integration-tests:0.0.1
+  dais-integration-tests:
+    image: registry.lts.harvard.edu/lts/int-tests:0.0.1
     build:
       context: .
       dockerfile: Dockerfile

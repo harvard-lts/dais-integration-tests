@@ -5,8 +5,8 @@ version: '3.8'
 
 services:
 
-  hdc-integration-tests:
-    container_name: 'hdc-integration-tests'
+  dais-integration-tests:
+    container_name: 'dais-integration-tests'
     build:
       context: './'
       dockerfile: 'DockerfileLocal'
