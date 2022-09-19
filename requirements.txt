@@ -31,4 +31,3 @@ structlog==20.1.0
 stomp.py==7.0.0
 urllib3==1.26.5
 Werkzeug==1.0.1
-glob==3.10.7
