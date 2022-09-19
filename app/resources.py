@@ -1,7 +1,7 @@
 import re
+import glob
 import shutil
 import time
-import boto3
 import requests
 from flask_restx import Resource, Api
 from flask import render_template
@@ -15,12 +15,11 @@ def define_resources(app):
 
     # Env vars
     dataverse_endpoint = os.environ.get('DATAVERSE_ENDPOINT')
+    curator_app_endpoint = os.environ.get('CURATOR_APP_ENDPOINT')
     admin_user_token = os.environ.get('ADMIN_USER_API_TOKEN')
-    dataverse_s3_access_id = os.environ.get('AWS_ACCESS_KEY_ID')
-    dataverse_s3_secret_key = os.environ.get('AWS_SECRET_ACCESS_KEY')
-    s3_bucket_name = os.environ.get('S3_BUCKET_NAME')
-    dropbox_destination = os.environ.get('DROPBOX_DESTINATION')
-
+    base_dropbox_path = os.environ.get('BASE_DROPBOX_PATH')
+    epadd_dropbox = os.environ.get('EPADD_DROPBOX')
+    dataverse_dropbox = os.environ.get('DATAVERSE_DROPBOX')
 
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
@@ -57,14 +56,54 @@ def define_resources(app):
 
         return json.dumps(result)
 
-    @app.route('/ingest/happypath')
-    def ingest_happypath():
-        # 1) Call curator app for ingest
-        # 2) Wait
-        # 3) Check for loadreport file
-        # 4) DIMS calls integration tests for status - check status
-        pass
+    @app.route('/curatorApp/publishExport')
+    def curator_app_publish_export():
+        num_failed_tests = 0
+        tests_failed = []
+        result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
 
+        publish_test_export = requests.get(
+            curator_app_endpoint
+            + '/testExport',
+            verify=False)
+        json_publish_export = publish_test_export.json()
+
+        if json_publish_export["status"] != "success":
+            result["num_failed"] += 1
+            result["tests_failed"].append("ePADD Curator App Publish Export")
+            result["Failed Publish ePADD Export"] = {"status_code": publish_test_export.status_code}
+            return json.dumps(result)
+
+        result["info"]["Publish ePADD Export"] = {"status_code": publish_test_export.status_code}
+
+        return json.dumps(result)
+
+    # Wait 5-10 mins before calling this after an ePADD export
+    # is published to give the pipeline time to execute
+    @app.route('/curatorApp/checkMockLoadreport/<test_batch_name>')
+    def curator_app_mock_loadreport(test_batch_name=None):
+        num_failed_tests = 0
+        tests_failed = []
+        result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
+
+        if test_batch_name == None:
+            result["num_failed"] += 1
+            result["tests_failed"].append("Find Mock ePADD Loadreport")
+            result["Failed Find Mock ePADD Loadreport"] = {"invalid parameters": "test_batch_name", "text": "test_batch_name cannot be None"}
+            return json.dumps(result)
+
+        app.logger.debug("Look for mock epadd loadreport in dropbox")
+        if len(glob.glob(os.path.join(base_dropbox_path, "lts_load_reports", epadd_dropbox, "incoming", test_batch_name))) != 0:
+            result["info"]["Find Mock ePADD Loadreport"] = {
+                "Found Loadreport at Path": str(
+                    os.path.join(base_dropbox_path, "lts_load_reports", epadd_dropbox, "incoming", test_batch_name))}
+        else:
+            result["num_failed"] += 1
+            result["tests_failed"].append("Did Not Find Mock ePADD Loadreport")
+            result["Failed Find Mock ePADD Loadreport"] = {"Find Mock ePADD Loadreport": "Could not find " +
+                                                                                         test_batch_name + "in dropbox " + os.path.join(
+                base_dropbox_path, "lts_load_reports", epadd_dropbox)}
+        return json.dumps(result)
 
     @app.route('/DVIngest/createDataset')
     def dv_ingest_create_dataset():
@@ -103,7 +142,6 @@ def define_resources(app):
 
         return json.dumps(result)
 
-
     @app.route('/DVIngest/publishDataset/<dataset_id>/<persistent_id>')
     def dv_ingest_publish_dataset(dataset_id=None, persistent_id=None):
         num_failed_tests = 0
@@ -116,7 +154,7 @@ def define_resources(app):
             result["num_failed"] += 1
             result["tests_failed"].append("Publish Dataset")
             result["Failed Publish Dataset"] = {"invalid parameters": "dataset_id, persistent_id",
-                                               "text": "Both parameters must be provided"}
+                                                "text": "Both parameters must be provided"}
             return json.dumps(result)
 
         app.logger.debug("Publishing dataset")
@@ -155,7 +193,6 @@ def define_resources(app):
         result["info"]["Publish Dataset"] = {"status_code": publish_dataset.status_code}
         return json.dumps(result)
 
-
     @app.route('/ingest/checkDropbox/<batchName>')
     def ingest_check_dropbox(batchName):
         num_failed_tests = 0
@@ -163,20 +200,21 @@ def define_resources(app):
         result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
 
         dataset_transferred = False
-        app.logger.debug("checking dir: " + dropbox_destination + "/" + batchName)
-        if os.path.exists(os.path.join(dropbox_destination, batchName)):
+        app.logger.debug(
+            "checking dir: " + base_dropbox_path + "/" + dataverse_dropbox + "/" + "incoming" + "/" + batchName)
+        if os.path.exists(os.path.join(base_dropbox_path, dataverse_dropbox, "incoming", batchName)):
             dataset_transferred = True
             result["info"]["Dropbox Transfer Status"] = {
-                "Found Dataset at Path": str(os.path.join(dropbox_destination, batchName))}
+                "Found Dataset at Path": str(os.path.join(base_dropbox_path, dataverse_dropbox, "incoming", batchName))}
 
         if not dataset_transferred:
             result["num_failed"] += 1
             result["tests_failed"].append("Check Dropbox Transfer")
             result["Failed Dropbox Transfer"] = {
-                "Dropbox Transfer Status": "Could not find " + batchName + " in dropbox " + dropbox_destination}
+                "Dropbox Transfer Status": "Could not find " + batchName + " in dropbox " + os.path.join(
+                    base_dropbox_path, dataverse_dropbox)}
 
         return json.dumps(result)
-
 
     @app.route('/ingest/deleteFromDropbox/<batchName>')
     def ingest_delete_from_dropbox(batchName):
@@ -185,12 +223,14 @@ def define_resources(app):
         result = {"num_failed": num_failed_tests, "tests_failed": tests_failed, "info": {}}
 
         app.logger.debug("Delete test dataset from dropbox")
-        if shutil.rmtree(os.path.join(dropbox_destination, batchName)):
+        if shutil.rmtree(os.path.join(base_dropbox_path, dataverse_dropbox, "incoming", batchName)):
             result["info"]["Delete Dataset From Dropbox"] = {
-                "Deleted Dataset at Path": str(os.path.join(dropbox_destination, batchName))}
+                "Deleted Dataset at Path": str(
+                    os.path.join(base_dropbox_path, dataverse_dropbox, "incoming", batchName))}
         else:
             result["num_failed"] += 1
             result["tests_failed"].append("Delete Dataset From Dropbox")
             result["Failed Delete From Dropbox"] = {"Delete From Dropbox": "Could not delete " +
-                                                                           batchName + "in dropbox " + dropbox_destination}
+                                                                           batchName + "in dropbox " + os.path.join(
+                base_dropbox_path, dataverse_dropbox)}
         return json.dumps(result)
