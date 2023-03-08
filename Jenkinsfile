@@ -6,6 +6,5 @@
 // intTestEndpoints: List of integration test endpoints i.e. ['healthcheck/', 'another/example/']
 // default values: slackChannel = "lts-jenkins-notifications"
 
-
 def endpoints = []
 ltsBasicPipeline.call("int-tests", "DAIS", "hdc3a", "10582", endpoints, "hdc-3a")
