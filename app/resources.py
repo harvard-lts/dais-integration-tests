@@ -104,6 +104,26 @@ def define_resources(app):
                                                                                          test_batch_name + "in dropbox " + os.path.join(
                 base_dropbox_path, "lts_load_reports", epadd_dropbox)}
         return json.dumps(result)
+    
+        
+    @app.route('/curatorApp/testbatch/<batchName>')
+    def curator_app_performance_test(batchName):
+        curator_app_endpoint = os.getenv("CURATOR_APP_ENDPOINT")
+        url = os.path.join(curator_app_endpoint, "runTest", batchName)
+        result = {"num_failed": 0, "tests_failed": [], "info": {}}
+        app.logger.debug("Calling {}".format(url))
+        response = requests.get(url, verify=False)
+        app.logger.debug("RESPONSE")
+        app.logger.debug(response)
+        json_response = response.json()
+        if json_response["status"] != "success":
+            result["num_failed"] = 1
+            result["tests_failed"].append("Curator App testing batch " + batchName)
+            return json.dumps(result)
+        
+        result["info"]["Curator App Performance Test: "+batchName] = {"status_code": response.status_code}
+
+        return json.dumps(result)
 
     @app.route('/DVIngest/createDataset')
     def dv_ingest_create_dataset():
@@ -234,3 +254,4 @@ def define_resources(app):
                                                                            batchName + "in dropbox " + os.path.join(
                 base_dropbox_path, dataverse_dropbox)}
         return json.dumps(result)
+
