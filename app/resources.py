@@ -10,6 +10,7 @@ import jwt
 import jcs
 from datetime import timedelta
 import hashlib
+import traceback
 
 
 def define_resources(app):
@@ -74,8 +75,9 @@ def define_resources(app):
         try:
             _call_dims_api(payload_data)
         except Exception:
+            exception_msg = traceback.format_exc()
             result["num_failed"] = 1
-            result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
+            result["tests_failed"].append("DIMS Ingest call failed " + exception_msg)
             return json.dumps(result)
 
         json_ingest_response = ingest_etd_export.json()
@@ -83,7 +85,7 @@ def define_resources(app):
         app.logger.debug(json_ingest_response)
         if json_ingest_response["status"] == "failure":
             result["num_failed"] = 1
-            result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
+            result["tests_failed"].append("DIMS Ingest call failed " + json_ingest_response)
             return json.dumps(result)
         
         result["info"]["ETD DAIS Call: "+test_data_dir] = {"status_code": json_ingest_response["status_code"]}
