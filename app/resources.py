@@ -61,7 +61,7 @@ def define_resources(app):
         return json.dumps(result)
     
     @app.route('/etd/testbatch')
-    def etd_batch_dais_tests(batchName):
+    def etd_batch_dais_tests():
         result = {"num_failed": 0, "tests_failed": [], "info": {}}
         
         test_data_dir = "test_data/ETD_THESIS"
