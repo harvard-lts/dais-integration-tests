@@ -4,6 +4,7 @@ import time
 import requests
 from flask_restx import Resource, Api
 from flask import render_template
+from flask import send_from_directory
 import os, os.path, json
 from datetime import datetime
 import jwt
@@ -60,6 +61,11 @@ def define_resources(app):
             result["DTS"] = {"status_code": health.status_code, "text": health.text}
 
         return json.dumps(result)
+    
+    @app.route('/favicon.ico')
+    def favicon():
+        return send_from_directory(os.path.join(app.root_path, 'static'),
+                            'favicon.ico',mimetype='image/vnd.microsoft.icon')
     
     @app.route('/etd/testbatch')
     def etd_batch_dais_tests():
