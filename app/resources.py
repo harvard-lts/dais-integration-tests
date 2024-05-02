@@ -1,4 +1,3 @@
-import re
 import glob
 import shutil
 import time
@@ -25,8 +24,7 @@ def define_resources(app):
     base_dropbox_path = os.environ.get('BASE_DROPBOX_PATH')
     epadd_dropbox = os.environ.get('EPADD_DROPBOX')
     dataverse_dropbox = os.environ.get('DATAVERSE_DROPBOX')
-    etd_dropbox = os.environ.get('ETD_DROPBOX')
-
+    
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
     class Version(Resource):
@@ -67,8 +65,7 @@ def define_resources(app):
         result = {"num_failed": 0, "tests_failed": [], "info": {}}
         
         test_data_dir = "test_data/ETD_THESIS"
-        dims_endpoint = os.getenv('DIMS_ENDPOINT')
-
+        
         # Call DIMS ingest
         ingest_etd_export = None
 
@@ -76,7 +73,7 @@ def define_resources(app):
 
         try:
             _call_dims_api(payload_data)
-        except Exception as e:
+        except Exception:
             result["num_failed"] = 1
             result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
             return json.dumps(result)
@@ -89,7 +86,7 @@ def define_resources(app):
             result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
             return json.dumps(result)
         
-        result["info"]["ETD DAIS Call: "+test_data_dir] = {"status_code": response.status_code}
+        result["info"]["ETD DAIS Call: "+test_data_dir] = {"status_code": json_ingest_response["status_code"]}
 
         return json.dumps(result)
 
