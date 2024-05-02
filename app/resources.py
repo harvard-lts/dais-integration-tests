@@ -357,7 +357,7 @@ def define_resources(app):
         # Call DIMS ingest
         ingest_etd_export = None
 
-        jwt_private_key_path = os.getenv('JWT_PRIVATE_KEY_PATH')
+        jwt_private_key_path = os.getenv('DIMS_PRIVATE_KEY')
         try:
             with open(jwt_private_key_path) as jwt_private_key_file:
                 jwt_private_key = jwt_private_key_file.read()
@@ -376,12 +376,12 @@ def define_resources(app):
         request_body = jcs.canonicalize(payload_data).decode("utf-8")
         body_hash = hashlib.sha256(request_body.encode()).hexdigest()
         jwt_token = jwt.encode(
-            payload={'iss': 'ETD', 'iat': current_epoch,
+            payload={'iss': 'DAIS_int_test', 'iat': current_epoch,
                      'bodySHA256Hash': body_hash,
                      'exp': int(expiration.timestamp())},
             key=jwt_private_key,
             algorithm='RS256',
-            headers={"alg": "RS256", "typ": "JWT", "kid": "defaultEtd"}
+            headers={"alg": "RS256", "typ": "JWT", "kid": "defaultDaisIntTest"}
         )
 
         headers = {"Authorization": "Bearer " + jwt_token}
