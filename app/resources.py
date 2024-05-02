@@ -6,6 +6,11 @@ import requests
 from flask_restx import Resource, Api
 from flask import render_template
 import os, os.path, json
+from datetime import datetime
+import jwt
+import jcs
+from datetime import timedelta
+import hashlib
 
 
 def define_resources(app):
@@ -20,6 +25,7 @@ def define_resources(app):
     base_dropbox_path = os.environ.get('BASE_DROPBOX_PATH')
     epadd_dropbox = os.environ.get('EPADD_DROPBOX')
     dataverse_dropbox = os.environ.get('DATAVERSE_DROPBOX')
+    etd_dropbox = os.environ.get('ETD_DROPBOX')
 
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
@@ -53,6 +59,37 @@ def define_resources(app):
             result["num_failed"] += 1
             result["tests_failed"].append("DTS healthcheck")
             result["DTS"] = {"status_code": health.status_code, "text": health.text}
+
+        return json.dumps(result)
+    
+    @app.route('/etd/testbatch')
+    def etd_batch_dais_tests(batchName):
+        result = {"num_failed": 0, "tests_failed": [], "info": {}}
+        
+        test_data_dir = "test_data/ETD_THESIS"
+        dims_endpoint = os.getenv('DIMS_ENDPOINT')
+
+        # Call DIMS ingest
+        ingest_etd_export = None
+
+        payload_data = _build_drs_admin_md_for_documentation(test_data_dir)
+
+        try:
+            _call_dims_api(payload_data)
+        except Exception as e:
+            result["num_failed"] = 1
+            result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
+            return json.dumps(result)
+
+        json_ingest_response = ingest_etd_export.json()
+        app.logger.debug("Ingest response")
+        app.logger.debug(json_ingest_response)
+        if json_ingest_response["status"] == "failure":
+            result["num_failed"] = 1
+            result["tests_failed"].append("DIMS Ingest call failed " + test_data_dir)
+            return json.dumps(result)
+        
+        result["info"]["ETD DAIS Call: "+test_data_dir] = {"status_code": response.status_code}
 
         return json.dumps(result)
 
@@ -255,3 +292,106 @@ def define_resources(app):
                 base_dropbox_path, dataverse_dropbox)}
         return json.dumps(result)
 
+    def _build_drs_admin_md_for_documentation(dest_path):
+        
+        # Create a unique OSN based on the timestamp
+        osn_unique_appender = str(int(datetime.now().timestamp()))
+
+        thesis_name = "Thesis.pdf"
+        license_name = "License.pdf"
+        file_info = {
+            thesis_name: {
+                "modified_file_name":
+                "Thesis.pdf",
+                "object_role": "THESIS",
+                "object_osn": "ETD_THESIS_DAIS_test_"
+                + osn_unique_appender,
+                "file_osn": "ETD_THESIS_DAIS_test_"
+                + osn_unique_appender + "_1"
+            },
+            license_name: {
+                "modified_file_name":
+                "License.pdf",
+                "object_role": "LICENSE",
+                "object_osn": "ETD_LICENSE_DAIS_test_"
+                + osn_unique_appender,
+                "file_osn": "ETD_LICENSE_DAIS_test_"
+                + osn_unique_appender + "_1"
+            },
+            "mets.xml": {
+                "modified_file_name": "mets.xml",
+                "object_role": "DOCUMENTATION",
+                "object_osn": "ETD_DOCUMENTATION_DAIS_test_"
+                + osn_unique_appender,
+                "file_osn": "ETD_DOCUMENTATION_DAIS_test_"
+                + osn_unique_appender + "_1"
+            }
+        }
+        payload_data = {"package_id": "ETD_TESTING_" + osn_unique_appender,
+                        "fs_source_path": dest_path,
+                        "s3_path": "",
+                        "s3_bucket_name": "",
+                        "depositing_application": "ETD",
+                        "admin_metadata": {
+                            "depositingSystem": "ETD",
+                            "ownerCode": "HUL.TEST",
+                            "billingCode": "HUL.TEST.BILL_0001",
+                            "urnAuthorityPath": "HUL.TEST",
+                            "original_queue": "test",
+                            'task_name': "test",
+                            "retry_count": 0,
+                            "mmsid": "12345",
+                            "dash_id": "TEST1234",
+                            "pq_id": "PQ-30522803",
+                            "alma_id": "99156631569803941",
+                            "file_info": file_info
+                        }
+                        }
+        return payload_data
+    
+    def _call_dims_api(payload_data): # pragma: no cover, no calling dims for testing # noqa
+        dims_endpoint = os.getenv('DIMS_ENDPOINT')
+
+        app.logger.debug("DIMS endpoint: {}".format(dims_endpoint))
+
+        # Call DIMS ingest
+        ingest_etd_export = None
+
+        jwt_private_key_path = os.getenv('JWT_PRIVATE_KEY_PATH')
+        try:
+            with open(jwt_private_key_path) as jwt_private_key_file:
+                jwt_private_key = jwt_private_key_file.read()
+        except Exception:
+            msg = "Error opening private jwt token."
+            raise Exception(msg)
+
+        jwt_expiration = int(os.getenv('JWT_EXPIRATION', 1800))
+        # calculate iat and exp values
+        current_datetime = datetime.now()
+        current_epoch = int(current_datetime.timestamp())
+        expiration = current_datetime + timedelta(seconds=jwt_expiration)
+        app.logger.debug("expiration: {}".format(expiration))
+
+        # generate JWT token
+        request_body = jcs.canonicalize(payload_data).decode("utf-8")
+        body_hash = hashlib.sha256(request_body.encode()).hexdigest()
+        jwt_token = jwt.encode(
+            payload={'iss': 'ETD', 'iat': current_epoch,
+                     'bodySHA256Hash': body_hash,
+                     'exp': int(expiration.timestamp())},
+            key=jwt_private_key,
+            algorithm='RS256',
+            headers={"alg": "RS256", "typ": "JWT", "kid": "defaultEtd"}
+        )
+
+        headers = {"Authorization": "Bearer " + jwt_token}
+
+        ingest_etd_export = requests.post(
+            dims_endpoint,
+            headers=headers,
+            json=payload_data,
+            verify=False)
+
+        json_ingest_response = ingest_etd_export.json()
+        if json_ingest_response["status"] == "failure":
+            raise Exception("DIMS Ingest call failed")
