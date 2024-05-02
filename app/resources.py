@@ -73,7 +73,7 @@ def define_resources(app):
         payload_data = _build_drs_admin_md_for_documentation(test_data_dir)
 
         try:
-            _call_dims_api(payload_data)
+            ingest_etd_export = _call_dims_api(payload_data)
         except Exception:
             exception_msg = traceback.format_exc()
             result["num_failed"] = 1
@@ -394,3 +394,4 @@ def define_resources(app):
         json_ingest_response = ingest_etd_export.json()
         if json_ingest_response["status"] == "failure":
             raise Exception("DIMS Ingest call failed")
+        return json_ingest_response
