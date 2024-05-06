@@ -79,14 +79,14 @@ def define_resources(app):
         payload_data = _build_drs_admin_md_for_documentation(test_data_dir)
 
         try:
-            ingest_etd_export = _call_dims_api(payload_data)
+            json_ingest_response = _call_dims_api(payload_data)
         except Exception:
             exception_msg = traceback.format_exc()
             result["num_failed"] = 1
             result["tests_failed"].append("DIMS Ingest call failed " + exception_msg)
             return json.dumps(result)
 
-        json_ingest_response = ingest_etd_export.json()
+        #json_ingest_response = ingest_etd_export.json()
         app.logger.debug("Ingest response")
         app.logger.debug(json_ingest_response)
         if json_ingest_response["status"] == "failure":
@@ -94,7 +94,7 @@ def define_resources(app):
             result["tests_failed"].append("DIMS Ingest call failed " + json_ingest_response)
             return json.dumps(result)
         
-        result["info"]["ETD DAIS Call: "+test_data_dir] = {"status_code": json_ingest_response["status_code"]}
+        result["info"]["ETD DAIS Call: "+test_data_dir] = {"status": json_ingest_response["status"]}
 
         return json.dumps(result)
 
@@ -355,7 +355,7 @@ def define_resources(app):
         return payload_data
     
     def _call_dims_api(payload_data): # pragma: no cover, no calling dims for testing # noqa
-        dims_endpoint = os.getenv('DIMS_ENDPOINT')
+        dims_endpoint = os.getenv('DIMS_ENDPOINT') + '/ingest'
 
         app.logger.debug("DIMS endpoint: {}".format(dims_endpoint))
 
