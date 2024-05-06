@@ -74,8 +74,6 @@ def define_resources(app):
         test_data_dir = "test_data/ETD_THESIS"
         
         # Call DIMS ingest
-        ingest_etd_export = None
-
         payload_data = _build_drs_admin_md_for_documentation(test_data_dir)
 
         try:
