@@ -26,6 +26,7 @@ def define_resources(app):
     base_dropbox_path = os.environ.get('BASE_DROPBOX_PATH')
     epadd_dropbox = os.environ.get('EPADD_DROPBOX')
     dataverse_dropbox = os.environ.get('DATAVERSE_DROPBOX')
+    etd_dropbox = os.environ.get('ETD_DROPBOX')
     
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
@@ -298,10 +299,11 @@ def define_resources(app):
                 base_dropbox_path, dataverse_dropbox)}
         return json.dumps(result)
 
-    def _build_drs_admin_md_for_documentation(dest_path):
+    def _build_drs_admin_md_for_documentation(source_path):
         
         # Create a unique OSN based on the timestamp
         osn_unique_appender = str(int(datetime.now().timestamp()))
+        destination_path = os.path.join(base_dropbox_path, etd_dropbox, "incoming", "ETD_TESTING_" + osn_unique_appender)
 
         thesis_name = "Thesis.pdf"
         license_name = "License.pdf"
@@ -334,9 +336,10 @@ def define_resources(app):
             }
         }
         payload_data = {"package_id": "ETD_TESTING_" + osn_unique_appender,
-                        "fs_source_path": dest_path,
+                        "fs_source_path": source_path,
                         "s3_path": "",
                         "s3_bucket_name": "",
+                        "destination_path": destination_path,
                         "depositing_application": "ETD",
                         "admin_metadata": {
                             "depositingSystem": "ETD",
