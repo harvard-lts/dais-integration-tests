@@ -72,9 +72,12 @@ def define_resources(app):
         result = {"num_failed": 0, "tests_failed": [], "info": {}}
         
         test_data_dir = "test_data/ETD_THESIS"
-        
+        dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), "ETD_THESIS")
+
+        shutil.copytree(test_data_dir, dest_data_dir)
+
         # Call DIMS ingest
-        payload_data = _build_drs_admin_md_for_documentation(test_data_dir)
+        payload_data = _build_drs_admin_md_for_documentation(dest_data_dir)
 
         try:
             json_ingest_response = _call_dims_api(payload_data)

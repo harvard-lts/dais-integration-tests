@@ -26,4 +26,4 @@ MQ_TRANSFER_QUEUE_TRANSFER_READY=/queue/transfer-ready
 CURATOR_APP_ENDPOINT=http://ltsds-cloud-dev-1.lib.harvard.edu:10586
 EPADD_DROPBOX=epadddev_secure
 
-ETD_DROPBOX=etddev
+OUTGOING_TEST_DATA_DIR=/home/appuser/outgoing_test_data_dir
