@@ -81,7 +81,7 @@ def define_resources(app):
         shutil.copy2(test_data_dir, os.path.join(dest_data_dir, "submission_999999.zip"))
 
         # Call DIMS ingest
-        payload_data = _build_drs_admin_md_for_documentation(dest_data_dir, osn_unique_appender)
+        payload_data = _build_drs_admin_md_for_documentation(os.path.join(dest_data_dir, "submission_999999.zip"), osn_unique_appender)
 
         try:
             json_ingest_response = _call_dims_api(payload_data)
