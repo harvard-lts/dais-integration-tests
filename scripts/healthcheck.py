@@ -11,6 +11,8 @@ try:
     if (r.status_code != 200):
         print("Int Test readiness failed")
         sys.exit(1)
+    print("Int Test readiness passed")
+    sys.exit(0)
 except Exception:
     print("Int test readiness failed")
     sys.exit(1)
