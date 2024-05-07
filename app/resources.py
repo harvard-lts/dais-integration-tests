@@ -77,8 +77,8 @@ def define_resources(app):
         dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), thesis_unique_name)
 
         if not os.path.isdir(dest_data_dir):
-            os.mkdir(dest_data_dir)
-        shutil.copy2(test_data_dir, dest_data_dir)
+            os.mkdirs(dest_data_dir, exists_ok=True)
+        shutil.copy2(test_data_dir, os.path.join(dest_data_dir, "submission_999999.zip"))
 
         # Call DIMS ingest
         payload_data = _build_drs_admin_md_for_documentation(dest_data_dir, osn_unique_appender)
