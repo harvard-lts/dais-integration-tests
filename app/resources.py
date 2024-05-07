@@ -74,7 +74,7 @@ def define_resources(app):
         # Create a unique OSN based on the timestamp
         osn_unique_appender = str(int(datetime.now().timestamp()))
         thesis_unique_name = "ETD_THESIS_" + osn_unique_appender
-        test_data_dir = "test_data/ETD_THESIS"
+        test_data_dir = "test_data/submission_999999.zip"
         dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), thesis_unique_name)
 
         shutil.copytree(test_data_dir, dest_data_dir)
@@ -303,10 +303,9 @@ def define_resources(app):
 
     def _build_drs_admin_md_for_documentation(source_path, osn_unique_appender):
         
-        destination_path = os.path.join(base_dropbox_path, etd_dropbox, "incoming", "ETD_TESTING_" + osn_unique_appender)
-
-        thesis_name = "Thesis.pdf"
-        license_name = "License.pdf"
+        thesis_name = "0521Yolandayuanlupeng_finalNaming Expeditor.pdf"
+        license_name = "setup_2E592954-F85C-11EA-ABB1-E61AE629DA94.pdf"
+        
         file_info = {
             thesis_name: {
                 "modified_file_name":
@@ -339,7 +338,6 @@ def define_resources(app):
                         "fs_source_path": source_path,
                         "s3_path": "",
                         "s3_bucket_name": "",
-                        "destination_path": destination_path,
                         "depositing_application": "ETD",
                         "admin_metadata": {
                             "depositingSystem": "ETD",
