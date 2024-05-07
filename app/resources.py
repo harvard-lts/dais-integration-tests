@@ -76,6 +76,8 @@ def define_resources(app):
         test_data_dir = "test_data/submission_999999.zip"
         dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), thesis_unique_name)
 
+        if not os.path.isdir(dest_data_dir):
+            os.mkdir(dest_data_dir)
         shutil.copy2(test_data_dir, dest_data_dir)
 
         # Call DIMS ingest
