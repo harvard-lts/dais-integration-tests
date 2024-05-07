@@ -26,7 +26,6 @@ def define_resources(app):
     base_dropbox_path = os.environ.get('BASE_DROPBOX_PATH')
     epadd_dropbox = os.environ.get('EPADD_DROPBOX')
     dataverse_dropbox = os.environ.get('DATAVERSE_DROPBOX')
-    etd_dropbox = os.environ.get('ETD_DROPBOX')
     
     # Heartbeat/health check route
     @dashboard.route('/version', endpoint="version", methods=['GET'])
@@ -77,7 +76,7 @@ def define_resources(app):
         test_data_dir = "test_data/submission_999999.zip"
         dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), thesis_unique_name)
 
-        shutil.copytree(test_data_dir, dest_data_dir)
+        shutil.copy2(test_data_dir, dest_data_dir)
 
         # Call DIMS ingest
         payload_data = _build_drs_admin_md_for_documentation(dest_data_dir, osn_unique_appender)
