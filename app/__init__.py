@@ -1,5 +1,5 @@
-import os, click
-from flask import Flask, current_app
+import os
+from flask import Flask
 from healthcheck import HealthCheck
 
 # Import custom modules from the local project

@@ -2,8 +2,6 @@
 __pycache__
 # Environment variables
 .env
-# JWT Keys
-jwtkeys.py
 # Logs
 *.log
 /logs/*
@@ -26,3 +24,12 @@ supervisord.pid
 .idea
 /.idea
 webapp.conf
+
+test_data/_aux/batch_ETD_THESIS/reports/*.txt
+!test_data/_aux/batch_ETD_THESIS/reports/.keep
+test_data/batch_ETD_THESIS/ETD_LICENSE/descriptor.xml
+test_data/batch_ETD_THESIS/ETD_THESIS/descriptor.xml
+test_data/batch_ETD_THESIS/batch.xml
+
+keys/*
+!keys/.keep

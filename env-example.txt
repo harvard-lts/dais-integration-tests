@@ -5,6 +5,8 @@ APP_VERSION=0.0.1
 APP_LOG_LEVEL=INFO
 
 DIMS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10580
+DIMS_PRIVATE_KEY=/home/appuser/keys/jwt.private.key
+JWT_EXPIRATION=1800
 DTS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10581
 BASE_DROPBOX_PATH=/drs2dev/drsfs/dropbox
 
@@ -23,3 +25,6 @@ MQ_TRANSFER_QUEUE_TRANSFER_READY=/queue/transfer-ready
 # ePADD Curator App
 CURATOR_APP_ENDPOINT=http://ltsds-cloud-dev-1.lib.harvard.edu:10586
 EPADD_DROPBOX=epadddev_secure
+
+OUTGOING_TEST_DATA_DIR=/home/appuser/outgoing_test_data_dir
+ETD_DROPBOX=etddev
