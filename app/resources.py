@@ -44,7 +44,7 @@ def define_resources(app):
         num_failed_tests = 0
         tests_failed = []
         result = {"num_failed": num_failed_tests, "tests_failed": tests_failed}
-
+        
         # Health Check Tests for DIMS
         health = requests.get(os.environ.get('DIMS_ENDPOINT') + '/health', verify=False)
         if health.status_code != 200:
@@ -71,14 +71,16 @@ def define_resources(app):
     @app.route('/etd/testbatch')
     def etd_batch_dais_tests():
         result = {"num_failed": 0, "tests_failed": [], "info": {}}
-        
+        # Create a unique OSN based on the timestamp
+        osn_unique_appender = str(int(datetime.now().timestamp()))
+        thesis_unique_name = "ETD_THESIS_" + osn_unique_appender
         test_data_dir = "test_data/ETD_THESIS"
-        dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), "ETD_THESIS")
+        dest_data_dir = os.path.join(os.getenv("OUTGOING_TEST_DATA_DIR"), thesis_unique_name)
 
         shutil.copytree(test_data_dir, dest_data_dir)
 
         # Call DIMS ingest
-        payload_data = _build_drs_admin_md_for_documentation(dest_data_dir)
+        payload_data = _build_drs_admin_md_for_documentation(dest_data_dir, osn_unique_appender)
 
         try:
             json_ingest_response = _call_dims_api(payload_data)
@@ -299,10 +301,8 @@ def define_resources(app):
                 base_dropbox_path, dataverse_dropbox)}
         return json.dumps(result)
 
-    def _build_drs_admin_md_for_documentation(source_path):
+    def _build_drs_admin_md_for_documentation(source_path, osn_unique_appender):
         
-        # Create a unique OSN based on the timestamp
-        osn_unique_appender = str(int(datetime.now().timestamp()))
         destination_path = os.path.join(base_dropbox_path, etd_dropbox, "incoming", "ETD_TESTING_" + osn_unique_appender)
 
         thesis_name = "Thesis.pdf"
@@ -395,6 +395,7 @@ def define_resources(app):
 
         headers = {"Authorization": "Bearer " + jwt_token}
 
+        app.logger.debug("Payload Data: {}".format(payload_data))
         ingest_etd_export = requests.post(
             dims_endpoint,
             headers=headers,
