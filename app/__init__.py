@@ -1,6 +1,5 @@
-import os, click
-from flask import Flask, current_app
-from healthcheck import HealthCheck
+import os
+from flask import Flask
 
 # Import custom modules from the local project
 # Import API resources
@@ -20,9 +19,5 @@ def create_app():
 
   # Resources
   resources.define_resources(app)
-
-  # Health Check
-  health = HealthCheck()
-  app.add_url_rule("/healthcheck", "healthcheck", view_func=health.run)
 
   return app

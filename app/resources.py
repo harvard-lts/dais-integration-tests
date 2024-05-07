@@ -1,4 +1,3 @@
-import re
 import glob
 import shutil
 import time
@@ -6,6 +5,7 @@ import requests
 from flask_restx import Resource, Api
 from flask import render_template
 import os, os.path, json
+import werkzeug
 
 
 def define_resources(app):
@@ -32,29 +32,35 @@ def define_resources(app):
     def hello_world():
         return render_template('index.html')
 
-    @app.route('/apps/healthcheck')
+    @app.route('/readiness')
+    @app.errorhandler(werkzeug.exceptions.BadRequest)
     def app_healthchecks():
         num_failed_tests = 0
         tests_failed = []
         result = {"num_failed": num_failed_tests, "tests_failed": tests_failed}
 
+        failed = False
         # Health Check Tests for DIMS
-        health = requests.get(os.environ.get('DIMS_ENDPOINT') + '/health', verify=False)
+        health = requests.get(os.environ.get('DIMS_ENDPOINT') + '/readiness', verify=False)
         if health.status_code != 200:
             result["num_failed"] += 1
             result["tests_failed"].append("DIMS healthcheck")
             result["DIMS"] = {"status_code": health.status_code, "text": health.text}
+            failed = True
 
         # Health Check Tests for DTS
         # TODO: status_code for DTS is 404, although the health check is successful
-        health = requests.get(os.environ.get('DTS_ENDPOINT') + '/healthcheck', verify=False)
-        json_health = json.loads(health.text)
-        if json_health["status"] != "success":
+        health = requests.get(os.environ.get('DTS_ENDPOINT') + '/readiness', verify=False)
+        if health.status_code != 200:
             result["num_failed"] += 1
             result["tests_failed"].append("DTS healthcheck")
             result["DTS"] = {"status_code": health.status_code, "text": health.text}
+            failed = True
 
-        return json.dumps(result)
+        if failed:
+            return "UNHEALTHY: DAIS Int Test not ready\n{}".format(json.dumps(result)), 500
+
+        return "HEALTHY: DAIS Int Test ready", 200
 
     @app.route('/curatorApp/publishExport')
     def curator_app_publish_export():

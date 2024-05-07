@@ -1,19 +1,8 @@
-FROM python:3.8-slim-buster
+FROM python:3.11-slim-buster
 
 COPY requirements.txt /tmp/
 
-RUN apt-get update && apt-get install -y curl libpq-dev gcc python-dev supervisor nginx && \
-  mkdir -p /etc/nginx/ssl/ && \
-  openssl req \
-          -x509 \
-          -subj "/C=US/ST=Massachusetts/L=Cambridge/O=Dis" \
-          -nodes \
-          -days 365 \
-          -newkey rsa:2048 \
-          -keyout /etc/nginx/ssl/nginx.key \
-          #-addext "subjectAltName=DNS:localhost" \
-          -out /etc/nginx/ssl/nginx.cert && \
-  chmod -R 755 /etc/nginx/ssl/ && \
+RUN apt-get update && apt-get install -y libpq-dev gcc python-dev supervisor nginx && \
   pip install --upgrade pip && \
   pip install gunicorn && \
   pip install --upgrade --force-reinstall -r /tmp/requirements.txt -i https://pypi.org/simple/ --extra-index-url https://test.pypi.org/simple/ &&\
@@ -22,6 +11,7 @@ RUN apt-get update && apt-get install -y curl libpq-dev gcc python-dev superviso
 
 # Supervisor to run and manage multiple apps in the same container
 ADD supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+ADD supervisord_filelog.conf /etc/supervisor/conf.d/supervisord_filelog.conf
 
 # Copy code into the image
 COPY --chown=appuser . /home/appuser
@@ -40,4 +30,4 @@ RUN rm -f /etc/nginx/sites-enabled/default && \
 WORKDIR /home/appuser
 USER appuser
 
-CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
+CMD ["bash", "conditional_start_script.sh"]
