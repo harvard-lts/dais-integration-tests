@@ -3,6 +3,7 @@ ENV=development
 APP_VERSION=0.0.1
 
 APP_LOG_LEVEL=INFO
+CONSOLE_LOGGING_ONLY=false
 
 DIMS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10580
 DTS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10581
