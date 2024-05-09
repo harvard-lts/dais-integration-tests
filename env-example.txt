@@ -3,11 +3,12 @@ ENV=development
 APP_VERSION=0.0.1
 
 APP_LOG_LEVEL=INFO
+CONSOLE_LOGGING_ONLY=false
 
-DIMS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10580
+DIMS_ENDPOINT=http://ltsds-cloud-dev-1.lib.harvard.edu:10580
 DIMS_PRIVATE_KEY=/home/appuser/keys/jwt.private.key
 JWT_EXPIRATION=1800
-DTS_ENDPOINT=https://ltsds-cloud-dev-1.lib.harvard.edu:10581
+DTS_ENDPOINT=http://ltsds-cloud-dev-1.lib.harvard.edu:10581
 BASE_DROPBOX_PATH=/drs2dev/drsfs/dropbox
 
 # Dataverse Vars

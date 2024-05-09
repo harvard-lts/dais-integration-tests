@@ -1,6 +1,7 @@
 import structlog
 import os, socket
 from datetime import datetime
+import sys
 
 # Reload
 if os.environ.get('ENV') == 'development':
@@ -17,49 +18,86 @@ pre_chain = [
     structlog.processors.TimeStamper(fmt='iso', utc=True),
 ]
 
-# Create a log folder for this container if it doesn't exist
-container_id = socket.gethostname()
-if not os.path.exists(f'/home/appuser/logs'):
-    os.makedirs(f'/home/appuser/logs')
+if os.getenv("CONSOLE_LOGGING_ONLY", "true") == "false":
+    # Create a log folder for this container if it doesn't exist
+    container_id = socket.gethostname()
+    if not os.path.exists(f'/home/appuser/logs/'):
+        os.makedirs(f'/home/appuser/logs/')
 
-# Get timestamp
-timestamp = datetime.today().strftime('%Y-%m-%d')
+    # Get timestamp
+    timestamp = datetime.today().strftime('%Y-%m-%d')
 
-# Log config
-logconfig_dict = {
-    "version": 1,
-    "disable_existing_loggers": True,
-    "formatters": {
-        "json_formatter": {
-            "()": structlog.stdlib.ProcessorFormatter,
-            "processor": structlog.processors.JSONRenderer(),
-            "foreign_pre_chain": pre_chain,
-        }
-    },
-    "handlers": {
-        "error_console": {
-            "class": "logging.FileHandler",
-            "formatter": "json_formatter",
-            "filename": f"/home/appuser/logs/error_console_{container_id}_{timestamp}.log",
-            "mode": "a"
+    # Log config
+    logconfig_dict = {
+        "version": 1,
+        "disable_existing_loggers": True,
+        "formatters": {
+            "json_formatter": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "processor": structlog.processors.JSONRenderer(),
+                "foreign_pre_chain": pre_chain,
+            }
         },
-        "console": {
-            "class": "logging.FileHandler",
-            "formatter": "json_formatter",
-            "filename": f"/home/appuser/logs/console_{container_id}_{timestamp}.log",
-            "mode": "a"
-        }
-    },
-    "loggers": {
-        'gunicorn.error': {
-            'handlers': ['console'],
-            'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
-            'propagate': False,
+        "handlers": {
+            "error_console": {
+                "class": "logging.FileHandler",
+                "formatter": "json_formatter",
+                "filename": f"/home/appuser/logs/error_console_{container_id}_{timestamp}.log",
+                "mode": "a"
+            },
+            "console": {
+                "class": "logging.FileHandler",
+                "formatter": "json_formatter",
+                "filename": f"/home/appuser/logs/console_{container_id}_{timestamp}.log",
+                "mode": "a"
+            }
         },
-        'gunicorn.access': {
-            'handlers': ['console'],
-            'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
-            'propagate': False,
+        "loggers": {
+            'gunicorn.error': {
+                'handlers': ['console'],
+                'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
+                'propagate': False,
+            },
+            'gunicorn.access': {
+                'handlers': ['console'],
+                'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
+                'propagate': False,
+            }
         }
     }
-}
+else: 
+    logconfig_dict = {
+        "version": 1,
+        "disable_existing_loggers": True,
+        "formatters": {
+            "json_formatter": {
+                "()": structlog.stdlib.ProcessorFormatter,
+                "processor": structlog.processors.JSONRenderer(),
+                "foreign_pre_chain": pre_chain,
+            }
+        },
+        "handlers": {
+            "error_console": {
+                "class": "logging.StreamHandler", 
+                "formatter": "json_formatter",
+                "stream": sys.stdout
+            },
+            "console": {
+                "class": "logging.StreamHandler",
+                "formatter": "json_formatter", 
+                "stream": sys.stdout
+            }
+        },
+        "loggers": {
+            'gunicorn.error': {
+                'handlers': ['error_console'],
+                'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
+                'propagate': False,
+            },
+            'gunicorn.access': {
+                'handlers': ['console'],
+                'level': os.environ.get('APP_LOG_LEVEL', 'INFO'),
+                'propagate': False,
+            }
+        }
+    }

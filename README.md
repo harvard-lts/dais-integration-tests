@@ -3,9 +3,9 @@ This project will run the integration tests for the DAIS project
 
 The project has the following endpoints available:
 
-* An API description that displays here: https://localhost:10582/
-* An API endpoint that displays the version here: https://localhost:10582/version
-* A Health Check page here: https://localhost:10582/healthcheck
+* An API description that displays here: http://localhost:10582/
+* An API endpoint that displays the version here: http://localhost:10582/version
+* A Readiness page here: http://localhost:10582/readiness
 
 ## Technology Stack
 ##### Language

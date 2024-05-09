@@ -9,13 +9,13 @@ services:
     container_name: 'dais-integration-tests'
     build:
       context: './'
-      dockerfile: 'DockerfileLocal'
+      dockerfile: 'Dockerfile'
     volumes:
       - './:/home/appuser'
     env_file:
       - '.env'
     ports:
-      - '10582:8443'
+      - '10582:8081'
     networks:
       - drsts-net
 
