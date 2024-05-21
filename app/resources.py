@@ -171,8 +171,7 @@ def define_resources(app):
         response = requests.get(url, verify=False)
         app.logger.debug("RESPONSE")
         app.logger.debug(response)
-        json_response = response.json()
-        if json_response["status"] != "success":
+        if response.status_code != 200:
             result["num_failed"] = 1
             result["tests_failed"].append("Curator App testing batch " + batchName)
             return json.dumps(result)
