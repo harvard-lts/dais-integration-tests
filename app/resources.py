@@ -164,7 +164,8 @@ def define_resources(app):
     @app.route('/curatorApp/testbatch/<batchName>')
     def curator_app_performance_test(batchName):
         curator_app_endpoint = os.getenv("CURATOR_APP_ENDPOINT")
-        url = os.path.join(curator_app_endpoint, "runTest", batchName)
+        url = os.path.join(curator_app_endpoint, "runTest")
+        url = url + "?batch_name=" + batchName
         result = {"num_failed": 0, "tests_failed": [], "info": {}}
         app.logger.debug("Calling {}".format(url))
         response = requests.get(url, verify=False)
